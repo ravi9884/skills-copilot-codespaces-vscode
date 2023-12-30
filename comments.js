@@ -1,28 +1,33 @@
 //create webserver
-const express = require('express');
-const app = express();
-const path = require('path');
-const bodyParser = require('body-parser');
-const fs = require('fs');
-const port = 3000;
-app.use(bodyParser.urlencoded({extended:false}));
-app.use(bodyParser.json());
+var express = require('express');
+var app = express();
+var server = app.listen(3000, listening);
+function listening(){
+    console.log('listening. . .');
+}
+//create database
+var Datastore = require('nedb');
+var db = new Datastore('comments.db');
+db.loadDatabase();
+//set up server
 app.use(express.static('public'));
-app.get('/',(req,res)=>{
-    res.sendFile(path.join(__dirname,'public','index.html'));
-})
-app.post('/comments',(req,res)=>{
-    console.log(req.body);
-    fs.appendFile('comments.txt',req.body.comment+'\n',(err)=>{
-        if(err){
-            console.log(err);
-            res.send('error');
-        }else{
-            console.log('success');
-            res.send('success');
+app.use(express.json({limit: '1mb'}));
+//post comment
+app.post('/api', (request, response) => {
+    console.log('I got a request!');
+    const data = request.body;
+    const timestamp = Date.now();
+    data.timestamp = timestamp;
+    db.insert(data);
+    response.json(data);
+});
+//get comments
+app.get('/api', (request, response) => {
+    db.find({}, (err, data) => {
+        if (err) {
+            response.end();
+            return;
         }
-    })
-})
-app.listen(port,()=>{
-    console.log('server is running at port '+port);
-})
+        response.json(data);
+    });
+});
